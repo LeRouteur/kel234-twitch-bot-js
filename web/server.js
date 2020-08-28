@@ -1,11 +1,4 @@
-/**
- * This is an example of a basic node.js script that performs
- * the Authorization Code oAuth2 flow to authenticate against
- * the Spotify Accounts.
- *
- * For more information, read
- * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
- */
+'use strict';
 
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
@@ -14,13 +7,14 @@ var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
-var crypto = require('crypto');
 const bodyParser = require('body-parser');
-const validator = require('validator');
 
-var client_id = '516af068412341e69675da2c0f364846'; // Your client id
-var client_secret = '1ee055be28384efcbca0f9c5cee6fe08'; // Your secret
-var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
+// Get the content of the env JSON file
+const data = JSON.parse(fs.readFileSync("../conf/env.json", 'utf-8'));
+
+var client_id = data.spotify.client_id;
+var client_secret = data.spotify.client_secret;
+var redirect_uri = data.spotify.redirect_uri;
 
 let db = new sqlite3.Database('../conf/kel234_bot_db', sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
@@ -53,6 +47,9 @@ app.use(express.static(__dirname + '/public'))
     .use(cookieParser())
     .use(bodyParser.urlencoded({extended: true}));
 
+/**
+ * Route used for user connection.
+ */
 app.post('/login', function (req, res) {
 
     /**
@@ -70,8 +67,9 @@ app.post('/login', function (req, res) {
     }, (error, rows) => {
         if (!rows) {
             res.status(401);
-            res.send('Invalid username or password');
-            return;
+            res.redirect('/#' + querystring.stringify({
+                error: 'bad_credentials'
+            }));
         }
         // receives all the results as an array
         rows.forEach(function (row) {
@@ -88,6 +86,9 @@ app.post('/login', function (req, res) {
     });
 });
 
+/**
+ * Route used as Spotify authorize request.
+ */
 app.get('/spotify', function (req, res) {
     var state = generateRandomString(16);
     res.cookie(stateKey, state);
@@ -104,6 +105,9 @@ app.get('/spotify', function (req, res) {
         }));
 })
 
+/**
+ * Route used as callback of Spotify authorize request.
+ */
 app.get('/callback', function (req, res) {
 
     // your application requests refresh and access tokens
@@ -143,17 +147,6 @@ app.get('/callback', function (req, res) {
                     if (err) return console.log(err);
                 });
 
-/*                var options = {
-                    url: 'https://api.spotify.com/v1/playlists/1UlJQWQApYaiwO89GpG80z/tracks',
-                    headers: {'Authorization': 'Bearer ' + access_token},
-                    json: true
-                };
-
-                // use the access token to access the Spotify Web API
-                request.get(options, function (error, response, body) {
-                    //console.log(body.items);
-                });*/
-
                 // we can also pass the token to the browser to make requests from there
                 res.redirect('http://localhost:8888/dashboard.html#' +
                     querystring.stringify({
@@ -170,6 +163,9 @@ app.get('/callback', function (req, res) {
     }
 });
 
+/**
+ * Route used for token refresh.
+ */
 app.get('/refresh_token', function (req, res) {
 
     // requesting access token from refresh token

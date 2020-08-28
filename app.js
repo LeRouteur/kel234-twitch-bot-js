@@ -20,19 +20,10 @@ const logger = winston.createLogger({
         new winston.transports.File({filename: './log/combined.log'}),
     ],
 });
-const request = require('request');
 const axios = require('axios');
 
-//TODO LIST
-//
-//- Récupérer la nouvelle clé d'authentification automatiquement toutes les heures dans "function requestToken()"
-//
-//- Trouver pourquoi ça met le message "Musique trouvée" alors que la musique n'existe pas et parfois l'inverse...
-//
-//- Essayer de refresh le token à chaque changement -> https://developer.spotify.com/documentation/general/guides/authorization-guide/ (part 2)
-
 // Get the content of the env JSON file
-const data = JSON.parse(fs.readFileSync("./conf/env.json"));
+const data = JSON.parse(fs.readFileSync("./conf/env.json", 'utf-8'));
 
 //Environement Settings
 
@@ -43,11 +34,7 @@ var username = data.twitch.username;
 var twitchToken = data.twitch.twitch_token;
 var channel = data.twitch.channel;
 
-// SPOTIFY PART
-var clientId = data.spotify.client_id;
-var clientSecret = data.spotify.client_secret;
-var redirectUri = data.spotify.redirect_uri;
-var scope = data.spotify.scope;
+let playlistId = data.spotify.playlist_id;
 
 const client = new tmi.Client({
     options: {debug: true},
@@ -67,6 +54,10 @@ client.connect().catch(console.error);
 client.on("message", onMessageHandler);
 client.on("connected", onConnectedHandler);
 
+/**
+ * Function used to get the token from the text file.
+ * @returns {string}
+ */
 function getToken() {
     try {
         return fs.readFileSync('conf/token.txt', 'utf-8');
@@ -75,15 +66,13 @@ function getToken() {
     }
 }
 
-function getUri() {
-    try {
-        return fs.readFileSync('conf/uri.txt', 'utf-8');
-    } catch (e) {
-        logger.log('error', 'Error while reading the URI text file: ' + e.stack);
-    }
-}
-
-// Prise de chaque message qui entre
+/**
+ * Function used to handle the incoming message.
+ * @param target
+ * @param context
+ * @param msg
+ * @param self
+ */
 function onMessageHandler(target, context, msg, self) {
     if (self) {
         return;
@@ -133,31 +122,25 @@ function onMessageHandler(target, context, msg, self) {
         );
     } else if (commandName.startsWith("!sr") === true) {
         let accessToken = getToken();
-        testSong(commandName, accessToken);
 
-        let uri = getUri();
-
-        if (uri) {
-            // song found, add it to playlist
-            //console.log(accessToken)
-            let result = addToQueue(uri, accessToken);
-            console.log(result)
-            if (result) {
-                client.say(
-                    target,
-                    `Votre musique a été trouvée et sera jouée dans quelques instants :)`
-                );
-            } else {
-                logger.log('error', 'Error while searching for Spotify track data');
-                client.say(target, 'Erreur! Avertissez-moi :)');
-            }
-        } else {
-            logger.log('error', 'Error while searching for Spotify track data');
-            client.say(
-                target,
-                `Votre musique n'a pas été trouvée... :/ Réessayez ;)`
-            );
-        }
+        testSong(commandName, accessToken)
+            .then(function (uri) {
+                // song found, add it to playlist
+                try {
+                    addToQueue(uri, accessToken);
+                    logger.log('info', 'Successfully added ')
+                    client.say(
+                        target,
+                        `Votre musique a été trouvée et sera jouée dans quelques instants :)`
+                    );
+                } catch (e) {
+                    logger.log('error', 'Error while searching for Spotify track data');
+                    client.say(target, "Une erreur est survenue. Merci de m'avertir :). Info sur l'erreur : " + e);
+                }
+            })
+            .catch(function (error) {
+                // handle error
+            });
 
         console.log(`* Commande !sr executée`);
     }
@@ -168,44 +151,23 @@ function onConnectedHandler(addr, port) {
     console.log(`Connected to ${addr}:${port}`);
 }
 
-function testSong(song, accessToken) {
-    let song1;
-    let song2;
-
-    song1 = song.replace("!sr", "");
-    song2 = song1.trim();
-
-    var uri = "";
-
-    axios.get('https://api.spotify.com/v1/search?q=' + encodeURIComponent(song2) + '&type=track&market=CH&limit=1', {
+/**
+ * Async function used to get the URI of the requested song.
+ * @param song
+ * @param accessToken
+ * @returns {Promise<string|string>}
+ */
+async function testSong(song, accessToken) {
+    song = song.replace("!sr", "").trim();
+    const response = await axios.get('https://api.spotify.com/v1/search?q=' + encodeURIComponent(song) + '&type=track&market=CH&limit=1', {
         headers: {
             Authorization: 'Bearer ' + accessToken
         }
-    })
-        // handle success
-        .then(function (response) {
-            uri = response.data.tracks.items[0].uri;
-            fs.writeFileSync('conf/uri.txt', uri, function (err) {
-                if (err) {
-                    return console.log(err);
-                } else {
-                    response = true;
-                }
-            });
-            logger.log('info', 'Successfully obtained URI for track ' + song2);
-        })
-        // handle error
-        .catch(function (error) {
-            logger.log('error', 'Error while accessing Spotify.');
-            return error;
-        });
+    });
+    return response.data.tracks.items[0].uri;
 }
 
-"!sr ava max salt"
-
 function addToQueue(uri, access_token) {
-
-    let playlistId = "1UlJQWQApYaiwO89GpG80z";
 
     axios.post('https://api.spotify.com/v1/playlists/' + encodeURIComponent(playlistId) + "/tracks?uris=" + encodeURIComponent(uri), "", {
         headers: {
@@ -221,6 +183,5 @@ function addToQueue(uri, access_token) {
             logger.log('error', 'Error while accessing Spotify.');
             console.log(error.response.data);
         }).then(function () {
-            return true;
     })
 }

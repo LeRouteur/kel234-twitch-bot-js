@@ -3,7 +3,7 @@
 <head>
     <title>Kel234 Twitch Bot - Dashboard</title>
     <link rel="stylesheet" href="style.css"/>
-    <!--<meta http-equiv="refresh" content="30"/>-->
+    <meta http-equiv="refresh" content="30"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
@@ -20,31 +20,17 @@
 
 <div id="user-profile-template"></div>
 <h1>Kel234 Twitch Bot - Dashboard</h1>
-<div>
-    <h3>Off/On</h3>
-    <label class="switch">
-        <input type="checkbox" id="myCheckbox" onchange="toggleCheck()" checked>
-        <span class="slider round"></span>
-    </label>
-</div>
+<br/>
 
 <div class="media-body" id="media-body">
 </div>
 
-<label for="track-list">Track List (last 10 songs)</label>
+<label for="track-list"><b>Track List (last 10 songs)</b></label>
 <ol class="media-body" id="track-list"></ol>
 
 <div id="oauth-template">
 </div>
-<script>
-    function toggleCheck() {
-        if (document.getElementById("myCheckbox").checked === true) {
-            alert("Bot is now on.");
-        } else {
-            alert("Bot is now stopped.");
-        }
-    }
-</script>
+
 <script>
     (function () {
 
@@ -68,13 +54,16 @@
             refresh_token = params.refresh_token,
             error = params.error;
 
+        var playlist_id = "5WmZmEWFjvPEhqNTcAtb7l";
+
         if (error) {
             alert('There was an error during the authentication');
-            window.location.href = 'http://localhost:8888';
+            window.location.replace = 'http://localhost:8888';
         } else {
             if (access_token) {
                 // render oauth info
-                $("#oauth-template").append("<h2>oAuth info</h2>\n" +
+                $("#oauth-template").append("<br/>" +
+                    "<h2>oAuth info</h2>\n" +
                     "    <dl class=\"dl-horizontal\">\n" +
                     "        <dt>Access token</dt>\n" +
                     "        <dd class=\"text-overflow\">" + access_token + "</dd>\n" +
@@ -82,8 +71,6 @@
                     "        <dd class=\"text-overflow\">" + refresh_token + "</dd>\n" +
                     "    </dl>"
                 );
-
-                var playlist_id = "1UlJQWQApYaiwO89GpG80z";
 
                 $.ajax({
                     type: 'GET',
@@ -93,6 +80,14 @@
                     },
                     dataType: 'json',
                     success: function (response) {
+
+                        $("#media-body").append("<h2>Playlist ID " + playlist_id + "</h2>\n" +
+                            "    <dl class=\"dl-horizontal\">\n" +
+                            "        <dt>Request URI</dt>\n" +
+                            "        <dd><a href=" + response.href + " target=_blank>" + response.href + "</a></dd>\n" +
+                            "        <br/>\n" +
+                            "    </dl>");
+
                         // check validity of response data
                         if (response.items.length > 0) {
                             // only display last 10 items
@@ -100,32 +95,24 @@
 
                             var items = [];
                             $.each(tracks, function (i, item) {
-                                console.log(item)
+                                //console.log(item)
                                 items.push("<li><b>" + item.track.artists[0].name + "</b> - " + item.track.name + "</li>");
                             }); // close each()
 
-                            $("#media-body").append("<h2>Playlist ID " + playlist_id + "</h2>\n" +
-                                "    <dl class=\"dl-horizontal\">\n" +
-                                "        <dt>Request URI</dt>\n" +
-                                "        <dd><a href=" + response.href + " target=_blank>" + response.href + "</a></dd>\n" +
-                                "        <br/>\n" +
-                                "    </dl>");
                             $("#track-list").append(items);
                         } else {
                             // no tracks found in playlist, show message in html
-                            $('#track-list').append("<h2>No tracks found in playlist.</h2>");
+                            $('#track-list').append("<p>No tracks found in playlist.</p>");
                         }
                     },
                     error: function () {
                         // token expired, refreshing it
-                        alert("Token expired, refresh it by clicking OK");
                         refreshToken();
                     }
                 });
             } else {
                 alert("No token provided, please contact the administrator.");
             }
-
 
             function refreshToken() {
                 // refreshing the token
@@ -137,7 +124,7 @@
                 }).done(function (data) {
                     access_token = data.access_token;
                     // redirect after token refresh
-                    window.location.replace("http://localhost:8888/dashboard.html#access_token=" + access_token + "6refresh_token=" + refresh_token);
+                    window.location.replace("http://localhost:8888/dashboard.html#access_token=" + access_token + "&refresh_token=" + refresh_token);
                 });
             }
         }
