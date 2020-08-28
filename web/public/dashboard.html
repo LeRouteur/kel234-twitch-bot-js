@@ -54,7 +54,8 @@
             refresh_token = params.refresh_token,
             error = params.error;
 
-        var playlist_id = "5WmZmEWFjvPEhqNTcAtb7l";
+        var playlist_id = "1iBdC2I4lLPlqeArFzIgxt";
+	  //var playlist_id = "1UlJQWQApYaiwO89GpG80z";
 
         if (error) {
             alert('There was an error during the authentication');
@@ -87,7 +88,6 @@
                             "        <dd><a href=" + response.href + " target=_blank>" + response.href + "</a></dd>\n" +
                             "        <br/>\n" +
                             "    </dl>");
-
                         // check validity of response data
                         if (response.items.length > 0) {
                             // only display last 10 items
@@ -124,7 +124,7 @@
                 }).done(function (data) {
                     access_token = data.access_token;
                     // redirect after token refresh
-                    window.location.replace("http://localhost:8888/dashboard.html#access_token=" + access_token + "&refresh_token=" + refresh_token);
+                    window.location.replace("https://bot.kel234.storagehost.ch/dashboard.html#access_token=" + access_token + "&refresh_token=" + refresh_token);
                 });
             }
         }

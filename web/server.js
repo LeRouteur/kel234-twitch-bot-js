@@ -10,13 +10,13 @@ const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 
 // Get the content of the env JSON file
-const data = JSON.parse(fs.readFileSync("../conf/env.json", 'utf-8'));
+const data = JSON.parse(fs.readFileSync("/var/www/html/kel234-twitch-bot-js/conf/env.json", 'utf-8'));
 
 var client_id = data.spotify.client_id;
 var client_secret = data.spotify.client_secret;
 var redirect_uri = data.spotify.redirect_uri;
 
-let db = new sqlite3.Database('../conf/kel234_bot_db', sqlite3.OPEN_READWRITE, (err) => {
+let db = new sqlite3.Database('/var/www/html/kel234-twitch-bot-js/conf/kel234_bot_db', sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
         return console.error(err.message);
     }
@@ -46,6 +46,11 @@ app.use(express.static(__dirname + '/public'))
     .use(cors())
     .use(cookieParser())
     .use(bodyParser.urlencoded({extended: true}));
+
+app.get('/login', function (req, res) {
+  // You should use one of line depending on type of frontend you are with
+  res.sendFile(__dirname + '/public/index.html'); //if html file is root directory
+});
 
 /**
  * Route used for user connection.
@@ -94,7 +99,7 @@ app.get('/spotify', function (req, res) {
     res.cookie(stateKey, state);
 
     // your application requests authorization
-    var scope = 'user-read-private user-read-email playlist-modify-public playlist-modify-private';
+    var scope = 'user-read-private user-read-email playlist-modify-public playlist-modify-private user-modify-playback-state';
     res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
             response_type: 'code',
@@ -143,12 +148,12 @@ app.get('/callback', function (req, res) {
                 var access_token = body.access_token,
                     refresh_token = body.refresh_token;
 
-                fs.writeFile('../conf/token.txt', access_token, function (err) {
+                fs.writeFile('/var/www/html/kel234-twitch-bot-js/conf/token.txt', access_token, function (err) {
                     if (err) return console.log(err);
                 });
 
                 // we can also pass the token to the browser to make requests from there
-                res.redirect('http://localhost:8888/dashboard.html#' +
+                res.redirect('https://bot.kel234.storagehost.ch/web/public/dashboard.html#' +
                     querystring.stringify({
                         access_token: access_token,
                         refresh_token: refresh_token
@@ -185,7 +190,7 @@ app.get('/refresh_token', function (req, res) {
             let access_token = body.access_token;
 
             // write new token in text file
-            fs.writeFile('../conf/token.txt', access_token, function (err) {
+            fs.writeFile('/var/www/html/kel234-twitch-bot-js/conf/token.txt', access_token, function (err) {
                 if (err) return console.log(err);
             });
 

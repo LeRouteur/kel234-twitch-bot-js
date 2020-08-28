@@ -1,9 +1,5 @@
 'use strict';
 
-const fetch = require("node-fetch");
-global.fetch = fetch;
-global.Headers = fetch.Headers;
-
 const tmi = require("tmi.js");
 const fs = require('fs');
 const winston = require('winston');
@@ -164,13 +160,15 @@ async function testSong(song, accessToken) {
             Authorization: 'Bearer ' + accessToken
         }
     });
+	//console.log(response.data.tracks.items[0]);
     return response.data.tracks.items[0].uri;
 }
 
 function addToQueue(uri, access_token) {
 
-    axios.post('https://api.spotify.com/v1/playlists/' + encodeURIComponent(playlistId) + "/tracks?uris=" + encodeURIComponent(uri), "", {
-        headers: {
+    //axios.post('https://api.spotify.com/v1/playlists/' + encodeURIComponent(playlistId) + "/tracks?uris=" + encodeURIComponent(uri), "", {
+      axios.post('https://api.spotify.com/v1/me/player/queue?uri=' + encodeURIComponent(uri), "", {
+	headers: {
             'Authorization': 'Bearer ' + access_token
         }
     })
